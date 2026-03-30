@@ -117,6 +117,7 @@ install(DIRECTORY mia_hand
 # Installing custom MuJoCo scene files from dev directory
 install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/../dev/mujoco/scenes/scene_right_custom.xml
+  ${CMAKE_CURRENT_SOURCE_DIR}/../dev/mujoco/scenes/mia_hand_right_grasp_frame.xml
   DESTINATION share/${PROJECT_NAME}/mia_hand
 )
 
