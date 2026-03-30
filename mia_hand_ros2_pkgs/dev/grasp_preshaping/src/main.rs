@@ -307,6 +307,7 @@ fn read_ros_pointcloud(topic: &str) -> Result<PointCloud, String> {
     let output = Command::new("ros2")
         .arg("topic")
         .arg("echo")
+        .arg("--full-length")
         .arg("--once")
         .arg(topic)
         .arg("sensor_msgs/msg/PointCloud2")
@@ -323,7 +324,20 @@ fn read_ros_pointcloud(topic: &str) -> Result<PointCloud, String> {
 
     let raw = String::from_utf8(output.stdout)
         .map_err(|e| format!("PointCloud2 output is not valid UTF-8: {}", e))?;
-    PointCloud::from_pointcloud2_yaml(&raw)
+    let normalized = raw
+        .lines()
+        .skip_while(|line| {
+            let trimmed = line.trim();
+            trimmed.is_empty() || trimmed == "---" || trimmed == "..."
+        })
+        .take_while(|line| {
+            let trimmed = line.trim();
+            trimmed != "---" && trimmed != "..."
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    PointCloud::from_pointcloud2_yaml(&normalized)
 }
 
 fn count_collisions(result: &PreshapeResult) -> usize {

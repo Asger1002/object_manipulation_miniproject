@@ -35,5 +35,16 @@
          under the new default hand pose. -->
     <geom name="target_sphere" type="sphere" pos="-0.1 -0.0499124 0.3100398" size="0.03"
       rgba="1 0 0 1" contype="0" conaffinity="0"/>
+
+    <!-- Fixed depth camera for simulated object-only point cloud publication.
+         Pose adapted from the legacy pixi prototype and chosen to view both the
+         target sphere and the approaching fingertips. -->
+    <body name="depth_cam_body" pos="-0.08 -0.46 0.36" euler="-1.67079632679 0 0">
+      <camera
+        name="front_depth_cam"
+        pos="0 0 0"
+        euler="3.14 0 0"
+        fovy="58"/>
+    </body>
   </worldbody>
 </mujoco>

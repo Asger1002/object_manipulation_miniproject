@@ -121,6 +121,12 @@ install(FILES
   DESTINATION share/${PROJECT_NAME}/mia_hand
 )
 
+# Installing Python helper scripts
+install(PROGRAMS
+  scripts/mujoco_depth_publisher_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # Installing MuJoCo plugins
 install(TARGETS miahanditactuator
   ARCHIVE DESTINATION lib 
