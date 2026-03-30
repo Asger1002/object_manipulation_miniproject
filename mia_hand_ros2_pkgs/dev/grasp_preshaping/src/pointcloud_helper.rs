@@ -105,6 +105,29 @@ impl PointCloud {
         Self::new(points)
     }
 
+    pub fn transformed(&self, transform: &Matrix4<f64>) -> Self {
+        let points = self
+            .points
+            .iter()
+            .map(|p| {
+                let x = transform[(0, 0)] * p.x
+                    + transform[(0, 1)] * p.y
+                    + transform[(0, 2)] * p.z
+                    + transform[(0, 3)];
+                let y = transform[(1, 0)] * p.x
+                    + transform[(1, 1)] * p.y
+                    + transform[(1, 2)] * p.z
+                    + transform[(1, 3)];
+                let z = transform[(2, 0)] * p.x
+                    + transform[(2, 1)] * p.y
+                    + transform[(2, 2)] * p.z
+                    + transform[(2, 3)];
+                Vector3::new(x, y, z)
+            })
+            .collect();
+        Self::new(points)
+    }
+
     #[cfg(test)]
     pub fn points(&self) -> &[Vector3<f64>] {
         &self.points
@@ -595,5 +618,25 @@ data: [0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64,0,0,160,64,0,0,192,64]
         assert!((p1.x - 0.005).abs() < 1e-12);
         assert!((p1.y - 0.01).abs() < 1e-12);
         assert!((p1.z + 0.015).abs() < 1e-12);
+    }
+
+    #[test]
+    fn transformed_applies_rigid_translation() {
+        let cloud = PointCloud::new(vec![Vector3::new(1.0, -2.0, 3.0), Vector3::new(0.5, 1.0, -1.5)]);
+        let mut tf = Matrix4::identity();
+        tf[(0, 3)] = -0.1;
+        tf[(1, 3)] = 0.2;
+        tf[(2, 3)] = 0.3;
+
+        let transformed = cloud.transformed(&tf);
+
+        let p0 = transformed.points()[0];
+        let p1 = transformed.points()[1];
+        assert!((p0.x - 0.9).abs() < 1e-12);
+        assert!((p0.y + 1.8).abs() < 1e-12);
+        assert!((p0.z - 3.3).abs() < 1e-12);
+        assert!((p1.x - 0.4).abs() < 1e-12);
+        assert!((p1.y - 1.2).abs() < 1e-12);
+        assert!((p1.z + 1.2).abs() < 1e-12);
     }
 }

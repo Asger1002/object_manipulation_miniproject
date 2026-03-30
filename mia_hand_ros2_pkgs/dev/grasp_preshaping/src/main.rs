@@ -1,5 +1,4 @@
-use nalgebra::Vector3;
-use nalgebra::Matrix4;
+use nalgebra::{Matrix4, Quaternion, UnitQuaternion, Vector3};
 use preshaping::lut_helper::FingerLUT;
 use preshaping::planner::{compute_preshape, PlannerConfig, PreshapeResult};
 use preshaping::pointcloud_helper::{AabbMask, PointCloud, PointCloudProximityChecker};
@@ -27,6 +26,18 @@ const JOINT_MRL: &str = "j_mrl_fle";
 
 const TRAJECTORY_COMMAND_TIME_FROM_START_SEC: f64 = 1.0;
 const TOPIC_POINTCLOUD: &str = "/segmented_object_cloud";
+
+const DEFAULT_MUJOCO_RIGHT_HAND_POS_X: f64 = -0.1;
+const DEFAULT_MUJOCO_RIGHT_HAND_POS_Y: f64 = 0.0;
+const DEFAULT_MUJOCO_RIGHT_HAND_POS_Z: f64 = 0.2;
+const DEFAULT_MUJOCO_RIGHT_HAND_QUAT_W: f64 = 0.707388;
+const DEFAULT_MUJOCO_RIGHT_HAND_QUAT_X: f64 = 0.706825;
+const DEFAULT_MUJOCO_RIGHT_HAND_QUAT_Y: f64 = 0.0;
+const DEFAULT_MUJOCO_RIGHT_HAND_QUAT_Z: f64 = 0.0;
+
+const DEFAULT_CUSTOM_SCENE_OBJECT_POS_X: f64 = -0.1;
+const DEFAULT_CUSTOM_SCENE_OBJECT_POS_Y: f64 = -0.049_912_4;
+const DEFAULT_CUSTOM_SCENE_OBJECT_POS_Z: f64 = 0.310_039_8;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PointCloudMode {
@@ -249,14 +260,47 @@ fn print_usage() {
     println!("  --iterations N         number of iterations (0 => run forever, default: 1)");
     println!("  --command-backend trajectory|pos_ff");
     println!("                         controller command target when --publish-commands is used (default: trajectory)");
-    println!("  --search-base-transform run a 3D grid search over base translation around (0,0,0)");
-    println!("  --base-search-step VALUE  translation increment in meters (default: 0.005)");
-    println!("  --base-search-span VALUE  search span in each axis, [-span,+span] (default: 0.02)");
+    println!("  Default hand pose matches mia_hand_mujoco/mia_hand/mia_hand_right.xml:");
+    println!("    pos=({:.3}, {:.3}, {:.3}), quat(wxyz)=({:.6}, {:.6}, {:.6}, {:.6})",
+        DEFAULT_MUJOCO_RIGHT_HAND_POS_X,
+        DEFAULT_MUJOCO_RIGHT_HAND_POS_Y,
+        DEFAULT_MUJOCO_RIGHT_HAND_POS_Z,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_W,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_X,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_Y,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_Z,
+    );
+    println!("  --search-base-transform run a 3D grid search over base translation around the default MuJoCo hand pose");
+    println!("  --base-search-step VALUE  translation increment in meters (default: 0.01)");
+    println!("  --base-search-span VALUE  search span in each axis, [-span,+span] (default: 0.2)");
     println!("  --aabb xmin ymin zmin xmax ymax zmax");
     println!("                         currently accepted but ignored (AABB temporarily disabled)");
     println!("  --offset-distal-proximal VALUE  finger-local X translation in meters");
     println!("  --offset-palmar-dorsal VALUE    finger-local Z translation in meters");
     println!("  --publish-commands     publish commands to the selected backend topics");
+}
+
+fn default_mujoco_right_hand_base_transform() -> Matrix4<f64> {
+    let rotation = UnitQuaternion::new_normalize(Quaternion::new(
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_W,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_X,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_Y,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_Z,
+    ));
+
+    let mut transform = rotation.to_homogeneous();
+    transform[(0, 3)] = DEFAULT_MUJOCO_RIGHT_HAND_POS_X;
+    transform[(1, 3)] = DEFAULT_MUJOCO_RIGHT_HAND_POS_Y;
+    transform[(2, 3)] = DEFAULT_MUJOCO_RIGHT_HAND_POS_Z;
+    transform
+}
+
+fn default_custom_scene_object_transform() -> Matrix4<f64> {
+    let mut transform = Matrix4::identity();
+    transform[(0, 3)] = DEFAULT_CUSTOM_SCENE_OBJECT_POS_X;
+    transform[(1, 3)] = DEFAULT_CUSTOM_SCENE_OBJECT_POS_Y;
+    transform[(2, 3)] = DEFAULT_CUSTOM_SCENE_OBJECT_POS_Z;
+    transform
 }
 
 fn read_ros_pointcloud(topic: &str) -> Result<PointCloud, String> {
@@ -334,10 +378,10 @@ fn search_best_base_transform(
                 let tz = iz as f64 * step;
 
                 let mut cfg = planner_cfg.clone();
-                let mut tf = Matrix4::identity();
-                tf[(0, 3)] = tx;
-                tf[(1, 3)] = ty;
-                tf[(2, 3)] = tz;
+                let mut tf = planner_cfg.base_transform;
+                tf[(0, 3)] += tx;
+                tf[(1, 3)] += ty;
+                tf[(2, 3)] += tz;
                 cfg.base_transform = tf;
 
                 let result = compute_preshape(lut, checker, &cfg)
@@ -385,11 +429,18 @@ fn main() {
     planner_cfg.mask = None;
     planner_cfg.distal_proximal_offset = cli.distal_proximal_offset;
     planner_cfg.palmar_dorsal_offset = cli.palmar_dorsal_offset;
-    let mut base_transform = Matrix4::identity();
-    base_transform[(0, 3)] = 0.0;
-    base_transform[(1, 3)] = -0.11;
-    base_transform[(2, 3)] = -0.05;
-    planner_cfg.base_transform = base_transform;
+    planner_cfg.base_transform = default_mujoco_right_hand_base_transform();
+
+    println!(
+        "Using hardcoded MuJoCo default hand pose: pos=({:.3}, {:.3}, {:.3}), quat(wxyz)=({:.6}, {:.6}, {:.6}, {:.6})",
+        DEFAULT_MUJOCO_RIGHT_HAND_POS_X,
+        DEFAULT_MUJOCO_RIGHT_HAND_POS_Y,
+        DEFAULT_MUJOCO_RIGHT_HAND_POS_Z,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_W,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_X,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_Y,
+        DEFAULT_MUJOCO_RIGHT_HAND_QUAT_Z,
+    );
 
     if cli.publish_commands {
         println!(
@@ -427,8 +478,23 @@ fn main() {
                 eprintln!("Failed to read PointCloud2 from ROS topic: {}", e);
                 std::process::exit(1);
             }),
-        }
-        .scaled(cli.pointcloud_scale);
+        };
+
+        let pc = pc.scaled(cli.pointcloud_scale);
+        let pc = match cli.mode {
+            PointCloudMode::File => {
+                let transform = default_custom_scene_object_transform();
+                println!(
+                    "[iter {}] Applying fixed file-cloud world translation: x={:.4}, y={:.4}, z={:.4}",
+                    iter_idx,
+                    transform[(0, 3)],
+                    transform[(1, 3)],
+                    transform[(2, 3)],
+                );
+                pc.transformed(&transform)
+            }
+            PointCloudMode::Ros => pc,
+        };
 
         println!(
             "[iter {}] Point cloud loaded with {} points (scale {:.6})",

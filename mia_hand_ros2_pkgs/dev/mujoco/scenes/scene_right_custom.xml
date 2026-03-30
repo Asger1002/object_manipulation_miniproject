@@ -1,19 +1,16 @@
-<!-- Custom scene matching the coordinate frame of the grasp_preshaping Rust script.
-     Coordinate frame rationale (all values in metres):
-       - World origin (0,0,0) = centre of the target sphere, matching sphere.xyz scaled by 0.03.
-       - Hand palm_r at (0, -0.11, -0.05) with identity orientation, matching:
-             base_transform[(1,3)] = -0.11
-             base_transform[(2,3)] = -0.05
-             base_transform rotation = identity
-         in grasp_preshaping/src/main.rs.
-       - Sphere radius = 0.03 m = unit sphere.xyz points × default pointcloud_scale (0.03).
-     The hand model is defined in mia_hand_right_grasp_frame.xml (same file as
-     mia_hand_right.xml, only palm_r pos/quat changed). -->
+<!-- Custom dev scene for grasp_preshaping validation.
+     The hand pose matches the default MuJoCo right-hand pose used in
+     grasp_preshaping/src/main.rs.
+     The target sphere is placed so that its position relative to the hand is the
+     same as in the original setup where the sphere was at world origin and the
+     hand was moved to (0, -0.11, -0.05) with identity orientation.
+     Relative sphere position in hand frame: (0, 0.11, 0.05)
+     Sphere radius = 0.03 m = sphere.xyz unit radius × default pointcloud_scale (0.03). -->
 <mujoco model="mia_hand_right custom scene">
   <include file="mia_hand_right_grasp_frame.xml"/>
 
-  <!-- Camera framing: centre between sphere (0,0,0) and hand base (0,-0.11,-0.05) -->
-  <statistic extent="0.4" center="0 -0.05 0"/>
+  <!-- Camera framing: centre between the default hand pose and the target sphere. -->
+  <statistic extent="0.4" center="-0.1 -0.025 0.255"/>
 
   <visual>
     <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
@@ -31,14 +28,12 @@
   </asset>
 
   <worldbody>
-    <light pos="0 0 1" dir="0 0 -1" directional="true"/>
-    <!-- Floor lowered to z=-0.1 so the hand body (z ~ -0.074 to -0.05) sits above it -->
+    <light pos="0 0 3" dir="0 0 -1" directional="true"/>
     <geom name="floor" size="0 0 .125" type="plane" material="groundplane"
-      pos="0 0 -0.1" conaffinity="15" condim="3"/>
-    <!-- Origin marker: red sphere at world origin (0,0,0).
-         Radius = 0.03 m = sphere.xyz unit radius × pointcloud_scale (0.03).
-         This is the target object the hand is configured to grasp. -->
-    <geom name="origin_marker" type="sphere" pos="0 0 0" size="0.03"
+      conaffinity="15" condim="3"/>
+    <!-- Target sphere position preserves the original sphere-to-hand relation
+         under the new default hand pose. -->
+    <geom name="target_sphere" type="sphere" pos="-0.1 -0.0499124 0.3100398" size="0.03"
       rgba="1 0 0 1" contype="0" conaffinity="0"/>
   </worldbody>
 </mujoco>

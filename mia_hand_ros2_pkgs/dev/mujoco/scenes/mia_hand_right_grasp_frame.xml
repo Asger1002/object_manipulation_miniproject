@@ -1,10 +1,10 @@
-<!-- Custom hand placement matching the grasp_preshaping Rust script coordinate frame.
-     The palm_r body is placed at pos="0 -0.11 -0.05" with identity orientation,
-     exactly matching the hardcoded base_transform in main.rs:
-       base_transform[(1,3)] = -0.11  (Y translation)
-       base_transform[(2,3)] = -0.05  (Z translation)
-     No quaternion rotation is applied (identity = same orientation as the URDF/LUT frame).
-     This file is otherwise identical to mia_hand_right.xml. -->
+<!-- Custom hand model for the dev MuJoCo scene.
+     The palm_r body is placed at the default MuJoCo right-hand pose used by
+     grasp_preshaping/src/main.rs:
+       pos = (-0.1, 0.0, 0.2)
+       quat = (0.707388, 0.706825, 0, 0)
+     This keeps the hand in the same pose as mia_hand_right.xml while allowing
+     the custom dev scene to place target objects independently. -->
 <mujoco model="mia_hand_right">
   <compiler angle="radian" meshdir="assets/"/>
 
@@ -46,11 +46,8 @@
   </asset>
 
   <worldbody>
-    <!-- pos matches base_transform in grasp_preshaping/src/main.rs:
-           base_transform[(1,3)] = -0.11
-           base_transform[(2,3)] = -0.05
-         No quat = identity rotation, matching the identity rotation in base_transform. -->
-    <body name="palm_r" pos="0 -0.11 -0.05">
+    <!-- Pose matches the hardcoded default MuJoCo hand transform used by grasp_preshaping. -->
+    <body name="palm_r" pos="-0.1 0 0.2" quat="0.707388 0.706825 0 0">
       <inertial pos="0.00268 0.0671 -0.016" quat="0.5 0.5 -0.5 0.5" mass="0.274" diaginertia="0.000343 0.000301 0.00013"/>
       <geom class="visual_r" pos="0.00303524 0.075372 -0.0252042" quat="0.991445 -0.130526 0 0" rgba="0.0150198 0.0150198 0.0150198 1" mesh="dorsum_simple"/>
       <geom class="visual_r" pos="0.00380022 0.0659745 -0.0120549" quat="0.991445 -0.130526 0 0" rgba="0.0150198 0.0150198 0.0150198 1" mesh="palm_simple"/>
