@@ -1,7 +1,10 @@
 To set up docker:
 
+FIRST:
+Check the docker-compose.yml, and comment out lines that have comments "#added LINUX" if you are not on a linux system. For reference, the compose should for Arch linux x86-64 with Wayland. I'm not sure if there are differences with ubuntu. The changes made are related to wayland/x11 functionality, so ubuntu Wayland should work the same, but no clue if WSL even includes x11/wayland.
+
 From the main directory (docker_miniproject):
-FIRST RUN:
+THEN RUN:
 
 echo -e "USER_UID=$(id -u $USER)\nUSER_GID=$(id -g $USER)" > mia_hand_ros2_pkgs/docker-deployment/.env
 
@@ -14,9 +17,15 @@ THEN cd to the docker-deployment directory:
 
 cd mia_hand_ros2_pkgs/docker-deployment
 
-THEN to run the simulation:
+THEN to build the simulation:
 
 scene=custom docker compose run --build --rm miahand_mujoco
+
+It will show a wrong simulation for some reason. So, use ctrl+c to stop the sim, type "exit" to leave the container shell, and then run the container again (without "--build"):
+
+scene=custom docker compose run --rm miahand_mujoco
+
+Now it should show the simulation with the hand and a red ball in front of it.
 
 THEN in a different terminal (also in docker-deployment folder), to start grasp script run:
 
