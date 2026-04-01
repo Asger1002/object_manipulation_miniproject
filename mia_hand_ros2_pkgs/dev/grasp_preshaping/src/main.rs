@@ -234,6 +234,14 @@ fn parse_cli_args() -> Result<CliArgs, String> {
         return Err("--base-search-span must be a finite value >= 0".to_string());
     }
 
+    if let Some(mask) = cfg.aabb_mask {
+        if mask.min.x > mask.max.x || mask.min.y > mask.max.y || mask.min.z > mask.max.z {
+            return Err(
+                "--aabb requires xmin <= xmax, ymin <= ymax, and zmin <= zmax".to_string(),
+            );
+        }
+    }
+
     Ok(cfg)
 }
 
@@ -274,7 +282,7 @@ fn print_usage() {
     println!("  --base-search-step VALUE  translation increment in meters (default: 0.01)");
     println!("  --base-search-span VALUE  search span in each axis, [-span,+span] (default: 0.2)");
     println!("  --aabb xmin ymin zmin xmax ymax zmax");
-    println!("                         currently accepted but ignored (AABB temporarily disabled)");
+    println!("                         limit collision checks to points inside the axis-aligned box");
     println!("  --offset-distal-proximal VALUE  finger-local X translation in meters");
     println!("  --offset-palmar-dorsal VALUE    finger-local Z translation in meters");
     println!("  --publish-commands     publish commands to the selected backend topics");
@@ -435,12 +443,18 @@ fn main() {
 
     let mut planner_cfg = PlannerConfig::default();
     planner_cfg.collision_tol = cli.collision_tol;
-    if cli.aabb_mask.is_some() {
-        eprintln!(
-            "WARNING: --aabb was provided, but AABB masking is currently DISABLED for this package. Ignoring provided bounds."
+    if let Some(mask) = cli.aabb_mask {
+        println!(
+            "Using AABB mask: min=({:.4}, {:.4}, {:.4}), max=({:.4}, {:.4}, {:.4})",
+            mask.min.x,
+            mask.min.y,
+            mask.min.z,
+            mask.max.x,
+            mask.max.y,
+            mask.max.z,
         );
     }
-    planner_cfg.mask = None;
+    planner_cfg.mask = cli.aabb_mask;
     planner_cfg.distal_proximal_offset = cli.distal_proximal_offset;
     planner_cfg.palmar_dorsal_offset = cli.palmar_dorsal_offset;
     planner_cfg.base_transform = default_mujoco_right_hand_base_transform();
