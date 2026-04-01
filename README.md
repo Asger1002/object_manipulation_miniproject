@@ -35,3 +35,7 @@ and in the shell run:
 cd src/dev/grasp_preshaping && cargo run -r -- --mode ros --pointcloud-topic /segmented_object_cloud --pointcloud-scale 1.0 --iterations 1 --publish-commands --command-backend pos_ff
 
 cd src/dev/grasp_preshaping && cargo run -r -- --mode ros --publish-commands --command-backend pos_ff
+
+Multiview:
+The multiview system presumes launch on the Nvidia Jetson, and is not containerized-- This will be harder to set up to run on your own systems.
+For using the launch script in the multiview folder, change the directory path in the .sh file as: RVIZ_CONFIG.
